@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="./hspa.js"></script>
+</head>
+<body>
+	<ul>
+		<li><a href="#/home">home</a></li>
+		<li><a href="#/home/room">home/room</a></li>
+		<li><a href="#/user">user</a></li>
+		<li id="docs">docs</li>
+		<li>about</li>
+	</ul>
+	<div id="router"></div>
+
+
+<script type="text/javascript">
+
+
+	var routes = {
+		/*'/home':{
+			url:'./views/home.html',
+			'/room':{
+				url:'./views/room.html',
+				on:function(){
+					console.log('room')
+				}
+			}
+		},*/
+		'/home':{
+			url:'./views/home.html',
+			'on':function(){
+				console.log('home')
+			}
+		},
+		'/home/room':{
+			url:'./views/room.html',
+			on:function(){
+				console.log('room')
+			}
+		},
+		'/user':{
+			url:'./views/user.html',
+			before:function(){
+				console.log('before user');
+			},
+			on:function(){
+				console.log('on user');
+			},
+			after:function(){
+				console.log('after user');
+			}
+		},
+		'/docs':{
+			url:'./views/docs.html',
+			on:function(params){
+				console.log('on docs',params);
+			}
+		}
+	}
+
+	hspa.init(routes,'/home');
+
+	var docs = document.getElementById('docs');
+	docs.onclick = function(){
+		var params = {
+			name:'hucong',
+			age:11,
+			id:'12312e12e'
+		}
+		hspa.goto('/docs',params);
+	}
+
+
+
+</script>
+</body>
+</html>
