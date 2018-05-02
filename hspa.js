@@ -419,8 +419,9 @@ function isUnNestedRoute(value){
 //根据 hash 执行对应的回调事件
 //path 为 "/home" 或 "/home/detail"
 var toOther=0,toNested=1,toParent=2,toReload=3;
-Router.prototype.dispatch = function(path){
-	var runList = this.createRunList(path,this.routes);
+Router.prototype.dispatch = function(path,callback){
+	var that = this;
+	var runList = this.createRunList(path,this.routes,null,callback);
 
 	//如果是 嵌套写法的非嵌套路由，如 /home/room 与 /home 之间的跳转规则为 toOther
 	//if( unNestedRoutes[path] || unNestedRoutes[this.lastPath] ){
@@ -464,8 +465,9 @@ Router.prototype.dispatch = function(path){
 		this.last = [ runList.after ];
 	}else if(type === toReload){
 		this.invoke(this.last); //调用上次路由的after	
-		this.dispatch(runList.parentPath);
-		this.dispatch(path);
+		this.dispatch(runList.parentPath,function(){
+			that.invoke(runList);
+		});
 		this.last = [ runList.after ];
 	}
 	this.lastPath = path;
@@ -474,7 +476,7 @@ Router.prototype.dispatch = function(path){
 
 //创建执行队列,如：[before,on]
 // path 为数组，如 ["home"] 、['home','detail']
-Router.prototype.createRunList = function(path,routes,parentReg){
+Router.prototype.createRunList = function(path,routes,parentReg,callback){
 
 	// 构建查询参数，如 "?name=xx&id=xxx" 构建为 Object
 	var _arr = path.split('?');
@@ -504,14 +506,16 @@ Router.prototype.createRunList = function(path,routes,parentReg){
 			if(match[0] && match[0] === path ){
 
 				var render = function(id,params){
-					text.load( routes[r].url, routes[r].on, r, parentReg,id,params );
+					var c = function(){
+						if(typeof callback === 'function') callback();
+						if(typeof routes[r].on === 'function') routes[r].on();
+					}
+					text.load( routes[r].url, c, r, parentReg,id,params );
 				}
 
 				runList = [ routes[r].before, render ].filter(Boolean);
 				runList.after = routes[r].after;
 				runList.capture = match.slice(1);
-				/*this.id = match.slice(1)[0];
-				this.query = query;*/
 				runList.capture.push(query);
 				runList.parentPath = parentReg;
 				return runList;
