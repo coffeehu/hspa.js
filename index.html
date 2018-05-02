@@ -7,42 +7,32 @@
 </head>
 <body>
 	<ul>
-		<li><a href="#/home">home</a></li>
-		<li><a href="#/home/room">home/room</a></li>
+		<li><a href="#/home">home（嵌套路由：room 和 desk）</a></li>
 		<li><a href="#/user">user</a></li>
-		<li id="docs">docs</li>
-		<li>about</li>
+		<li><a href="#/user/detail/12354355213">user/detail/:id</a></li>
+		<li id="docs">docs（代码跳转，并传参）</li>
 	</ul>
-	<div id="router"></div>
+	<router></router>
 
 
 <script type="text/javascript">
 
 
 	var routes = {
-		/*'/home':{
-			url:'./views/home.html',
-			'/room':{
-				url:'./views/room.html',
-				on:function(){
-					console.log('room')
-				}
-			}
-		},*/
 		'/home':{
-			url:'./views/home.html',
-			'on':function(){
-				console.log('home')
-			}
-		},
-		'/home/room':{
-			url:'./views/room.html',
-			on:function(){
-				console.log('room')
+			url:'./views/home/home.html',
+			'/room':{
+				url:'./views/home/room.html'
+			},
+			'/desk':{
+				url:'./views/home/desk.html',
+				on:function(){
+					console.log('desk');
+				}
 			}
 		},
 		'/user':{
-			url:'./views/user.html',
+			url:'./views/user/user.html',
 			before:function(){
 				console.log('before user');
 			},
@@ -53,15 +43,22 @@
 				console.log('after user');
 			}
 		},
+		'/user/detail/:id':{
+			url:'./views/user/user_detail.html',
+			on:function(id){				
+			}
+		},
 		'/docs':{
-			url:'./views/docs.html',
+			url:'./views/docs/docs.html',
 			on:function(params){
-				console.log('on docs',params);
+				//console.log('on docs',params);
 			}
 		}
 	}
 
+
 	hspa.init(routes,'/home');
+
 
 	var docs = document.getElementById('docs');
 	docs.onclick = function(){
