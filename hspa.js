@@ -444,6 +444,27 @@ Router.prototype.dispatch = function(path,callback){
 			return toParent;
 		}
 		else{
+			/*
+				考虑浏览器后退的情况
+
+				如从 /home/room 跳转到 /user,
+				浏览器再后退回到 /home/room
+				此时 routerType 为 "to other"，
+				页面渲染不会执行 /home ，而是直接执行 /home/room。这样会造成我们不想要的结果
+			*/
+			if(lastPath){
+				var _lastPath = lastPath.split('/').filter(Boolean)[0],
+					_path = path.split('/').filter(Boolean)[0];
+
+				// 说明是同一个根路由内的跳转
+				if(_lastPath === _path){
+
+				}
+				//说明是其他路由跳转到当前。且当前路径是嵌套路由写法
+				else if( path.split('/').length > 2 ){
+					return toReload;
+				}
+			}
 			return toOther;
 		}
 	}
