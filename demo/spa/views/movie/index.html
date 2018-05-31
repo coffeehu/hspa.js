@@ -1,0 +1,33 @@
+<template>
+	<div class="movie">
+		<ul class="movie-nav">
+			<li><a href="#/movie/hot">子路由：hot</a></li>
+			<li><a href="#/movie/like">子路由：like</a></li>
+		</ul>
+		<router></router>
+	</div>
+</template>
+
+<style>
+	.movie{
+		width: 100%;
+		height: 100%;
+	}
+	.movie-nav {
+		display: inline-block;
+		margin: 50px 30px;
+	}
+	.movie-nav li {
+		display: inline-block;
+		padding: 10px 20px;
+		border: 1px solid #666;
+		border-radius: 4px;
+		background: #e2e2e2;
+		margin: 0 10px;
+		font-size: 18px;
+	}
+</style>
+
+<script src="../../lib/layui/layui.js" once="true"></script>
+<script src="../../lib/echarts.min.js" once="true"></script>
+<script src="./index.js"></script>
