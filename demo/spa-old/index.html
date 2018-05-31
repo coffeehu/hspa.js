@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<script src="./hspa.js"></script>
+</head>
+<body>
+	<ul>
+		<li><a href="#/home">home（嵌套路由：room 和 desk）</a></li>
+		<li><a href="#/user">user</a></li>
+		<li><a href="#/user/detail/12354355213">user/detail/:id</a></li>
+		<li id="docs">docs（代码跳转，并传参）</li>
+	</ul>
+	<router></router>
+
+
+<script type="text/javascript">
+
+
+	var routes = {
+		'/home':{
+			url:'./views/home/home.html',
+			'/room':{
+				url:'./views/home/room.html'
+			},
+			'/desk':{
+				url:'./views/home/desk.html',
+				on:function(){
+					console.log('desk');
+				}
+			}
+		},
+		'/user':{
+			url:'./views/user/user.html',
+			before:function(){
+				console.log('before user');
+			},
+			on:function(){
+				console.log('on user');
+			},
+			after:function(){
+				console.log('after user');
+			}
+		},
+		'/user/detail/:id':{
+			url:'./views/user/user_detail.html',
+			on:function(id){				
+			}
+		},
+		'/docs':{
+			url:'./views/docs/docs.html',
+			on:function(params){
+				//console.log('on docs',params);
+			}
+		}
+	}
+
+
+	hspa.init(routes,'/home');
+
+
+	var docs = document.getElementById('docs');
+	docs.onclick = function(){
+		var params = {
+			name:'hucong',
+			age:11,
+			id:'12312e12e'
+		}
+		hspa.goto('/docs',params);
+	}
+
+
+
+</script>
+</body>
+</html>
