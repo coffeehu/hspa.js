@@ -108,6 +108,17 @@ var domUtils = window.domUtils = {
 }
 
 //-------------------------载入文本，解析--------------------------------
+/* 
+	压缩文件内容
+	在本地浏览器情况下，不压缩也能正常使用，
+	但在 linux 服务器下，若不压缩，使用正则 <style>(.*) 会匹配不到东西，估计是和linux文件的换行符有关
+*/
+var compress = function (code) {		                
+    code = code.replace(/(\n|\t|\s)*/ig, '$1');
+    code = code.replace(/\n|\t|\s(\{|\}|\,|\:|\;)/ig, '$1');
+    code = code.replace(/(\{|\}|\,|\:|\;)\s/ig, '$1');
+    return code;
+}
 var routerNum = 0; //用于判断是否是第一次请求路由
 var routerClass = '';  // 第一次渲染时，<router> 的 className
 var textCache = {};
@@ -192,6 +203,7 @@ var text = {
                     var content = xhr.responseText;
                     content =  content.replace(/\r\n/g,'');
                     content =  content.replace(/>\s+</g,'><');
+                    content = compress(content);
                     
                     var htmlRe = /<template>(.*)<\/template>/,
                         cssRe = /<style>(.*)<\/style>/,
