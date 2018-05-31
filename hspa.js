@@ -1,7 +1,8 @@
 (function(exports){
 
 
-var domUtils = {
+var domUtils = window.domUtils = {
+	domList: [],  // 跳转路由后会被移除的dom list
 	children:function(elem){
 		if(!elem) return;
 		var node = elem.firstChild;
@@ -13,22 +14,104 @@ var domUtils = {
 		}
 		return children;
 	},
-	unwrap:function(el){
-		var _p = el.parentNode;
-		var _children = _p.children;
-
-		var f = document.createDocumentFragment();
-		for(var i=0,l=_children.length;i<l;i++){
-			f.appendChild( _children[i] );	
+	remove: function(el){
+		var p = el.parentNode;
+		if(p){
+			el.parentNode.removeChild( el );
 		}
+		return el;
+	},
+	unwrap:function(el, addToDomList){
+		var _p = el.parentNode;
+		var _children = _p.childNodes;
 
+		var fragment = document.createDocumentFragment();
+		
+		for(var i=_children.length-1; i>=0; i--) {
+			if(addToDomList && _children[i].getAttribute('id') !== 'hspa-router' ){
+				this.domList.push( _children[i] );
+			}
+			fragment.insertBefore(_children[i], fragment.firstChild);
+		}
+		/*for(var i=0,l=_children.length;i<l;i++){
+			var node = _children[i].cloneNode(true);
+			fragment.appendChild( node );	
+		}*/
 		var wrap = _p.parentNode;
-		wrap.replaceChild( f, _p );
+		wrap.replaceChild( fragment, _p );
+
+		return wrap;
+	},
+	stripAndCollapse:function(value){
+		//var htmlwhite = ( /[^\x20\t\r\n\f]+/g );
+		var htmlwhite = ( /[^\s]+/g );
+		var arr = value.match(htmlwhite)||[];
+		return arr.join(' ');
+	},
+	classesToArray:function(value){
+		if ( Array.isArray( value ) ) {
+			return value;
+		}
+		if ( typeof value === "string" ) {
+			//var htmlwhite = ( /[^\x20\t\r\n\f]+/g );
+			var htmlwhite = ( /[^\s]+/g );
+			return value.match( htmlwhite ) || [];
+		}
+		return [];
+	},
+	addClass:function(el, value){
+		var classes = this.classesToArray(value),
+		curValue,cur,j,clazz,finalValue;
+
+		if(classes.length>0){
+			curValue = el.getAttribute && el.getAttribute('class') || '';
+			cur = ' '+this.stripAndCollapse(curValue)+' ';
+
+			if(cur){
+				var j=0;
+				while( (clazz = classes[j++]) ){
+					if ( cur.indexOf( ' ' + clazz + ' ' ) < 0 ) {
+						cur += clazz + ' ';
+					}
+				}
+
+				finalValue = this.stripAndCollapse(cur);
+				if(curValue !== finalValue){
+					el.setAttribute('class',finalValue);
+				}
+			}
+		}
+	},
+	removeClass:function(el, value){
+		var classes = this.classesToArray(value),
+		curValue,cur,j,clazz,finalValue;
+
+		if(classes.length>0){
+			curValue = el.getAttribute && el.getAttribute('class') || '';
+			cur = ' '+this.stripAndCollapse(curValue)+' ';
+
+			if(cur){
+				var j=0;
+				while( (clazz = classes[j++]) ){
+					if ( cur.indexOf( ' ' + clazz + ' ' ) > -1 ) {
+						cur = cur.replace(' '+clazz+' ' ,' ');
+					}
+				}
+
+				finalValue = this.stripAndCollapse(cur);
+				if(curValue !== finalValue){
+					el.setAttribute('class',finalValue);
+				}
+			}
+		}
 	}
 }
 
 //-------------------------载入文本，解析--------------------------------
+var routerNum = 0; //用于判断是否是第一次请求路由
+var routerClass = '';  // 第一次渲染时，<router> 的 className
 var textCache = {};
+var onceJsCollection = {};
 var text = {
     createXhr:function () {
         var xhr, i, progId;
@@ -72,10 +155,16 @@ var text = {
     		if(textCache[cacheName].jsPath){
     			var srcArr = textCache[cacheName].jsPath;
     			for(var i=0;i<srcArr.length;i++){
+					//判断是否是加载一次的脚本（once="true"）
+					var jsAttrObj = srcArr[i];
+					var tmpArr = (jsAttrObj.src).split('/');
+			        var filename = tmpArr[ tmpArr.length-1 ];
+			        if( onceJsCollection[filename] ) continue;
+
            			var _script = document.createElement('script');
 			        _script.charset = 'utf-8';
-			        _script.async = true;
-			        _script.src = srcArr[i];
+			        _script.async = false;
+			        _script.src = jsAttrObj.src;
 			        router.appendChild(_script);
            		}
     		}
@@ -125,8 +214,14 @@ var text = {
 
                     	var srcArr = [];
                    		for(var i=0;i<jsArr.length;i++ ){
-                   			var r = jsArr[i].match(/src="(.*)"/);
-                   			srcArr.push( _url+'/'+r[1] );
+                   			// 若 .match(/src="(.*)"/); 会出现bug：当为 <script src="xxx" once="true"> 时，r[1] 匹配的结果为 "xxx once="true""
+                   			var r = jsArr[i].match(/src="(.*)\.js"/);
+                   			var once = jsArr[i].match(/once="true"/) ? true : false; // 当 <script src="xx" once="true"> 表明该js脚本只会加载一次
+                   			var jsAttrObj = {
+                   				src: _url+'/'+r[1]+'.js',
+                   				once: once
+                   			}
+                   			srcArr.push(jsAttrObj);
                    		}
 
                    		if(!textCache[cacheName]){
@@ -135,12 +230,22 @@ var text = {
 	                    textCache[cacheName].jsPath = srcArr;
                    		
                    		for(var i=0;i<srcArr.length;i++){
+                   			//判断是否是加载一次的脚本（once="true"）
+							var jsAttrObj = srcArr[i];
+							var tmpArr = (jsAttrObj.src).split('/');
+					        var filename = tmpArr[ tmpArr.length-1 ];
+					        if( onceJsCollection[filename] ) continue;
+
                    			var _script = document.createElement('script');
 					        _script.charset = 'utf-8';
-					        _script.async = true;
-					        _script.src = srcArr[i];
+					        _script.async = false;
+					        _script.src = jsAttrObj.src;
+					        if(jsAttrObj.once){
+					        	onceJsCollection[filename] = true;
+					        }
 					        if(router) router.appendChild(_script);
                    		}
+
                     }
 
                     if(typeof callback === 'function'){
@@ -188,8 +293,34 @@ var text = {
 		if(router){
 			router.innerHTML = html;
 			var _child = domUtils.children(router)[0];
+
+			for(var i=domUtils.domList.length-1;i>=0;i--){
+				var node = domUtils.domList[i];
+				domUtils.remove(node);
+				domUtils.domList.splice(i, 1);
+			}
+
+			// 此时 <template> 里的 html 没有一个唯一的父元素包裹着
+			if( domUtils.children(router).length > 1 ) {
+				
+				var tmpRouter = document.createElement('div');
+				tmpRouter.setAttribute('id',routerId);
+				router.appendChild( tmpRouter );
+				domUtils.unwrap(_child, true);
+				return tmpRouter;
+			}
+
 			_child.setAttribute('id',routerId);
 
+			if(routerNum === 0){
+				routerClass = router.className;	
+			}
+			// bug：子路由的<router>也会加上根路由<router>的class，造成不想要的结果。这里暂时加个判断临时解决。
+			if(routerId.indexOf('/') === -1){
+				domUtils.addClass(_child, routerClass);
+			}
+			
+			routerNum++;
 			domUtils.unwrap(_child);
 
 			return _child;
@@ -214,6 +345,8 @@ var text = {
     		cssId = 'hspa-current-css';
     	}
 
+
+    	//bug:若是有子路由，那么页面会留下一个style标签，如：<style id="hspa-current-css/other">, 之后切换路由，改标签不会清空。会影响其他页面样式。
 		var style = document.getElementById(cssId);
 		if(style){
 
@@ -536,6 +669,25 @@ Router.prototype.createRunList = function(path,routes,parentReg,callback){
 
 				runList = [ routes[r].before, render ].filter(Boolean);
 				runList.after = routes[r].after;
+
+				var oldAfter = runList.after;
+				runList.after = function(){
+					// 说明是从一个子路由离开
+					//bug:若是有子路由，那么页面会留下一个style标签，如：<style id="hspa-current-css/other">, 之后切换路由，改标签不会清空。会影响其他页面样式。
+					var pathArr = path.split('/');
+					if( pathArr.length > 2 ) {
+						pathArr.pop();
+						var id = 'hspa-current-css' + pathArr.join('/');
+						var style = document.getElementById(id);
+						if(style){
+							style.innerHTML = '';
+						}
+					}
+					if(typeof oldAfter === 'function'){
+						oldAfter();
+					}
+				}
+
 				runList.capture = match.slice(1);
 				runList.capture.push(query);
 				runList.parentPath = parentReg;
