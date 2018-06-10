@@ -21,7 +21,7 @@
     <router></router>
 </body>
 ```
-页面都渲染在标签 <router></router> 中。 
+页面都渲染在 router 标签中。 
 
 ### 2、初始化
 ```
@@ -64,9 +64,12 @@ hspa.init(routes,'/home');
 <script src="./home.js"></script>
 ```
 
-### 1、<template>
+### 1、template
 html 内容。  
-如上，<router></router> 将被渲染为 <div class=”home”>....</div>
+如上，router 标签将被渲染为:
+```
+<div class=”home”>....</div>
+```
 
 **注意！建议 html 结构要有一个唯一的父元素包裹！**
 
@@ -80,16 +83,18 @@ html 内容。
 ```
 ### [在线例子](http://www.hcbook.cc/demo/hspa.js/demo/spa-map/index.html)
 
-### 2、<style>
+### 2、style
 css 样式内容。
 
-### 3、<script> 
+### 3、script
 只支持引入 js 文件，可以引入多个，执行顺序从上向下。
 
 
 # 路由的跳转
-1、<a>标签
+1、\<a\>标签
+```
 <a href=”#/home”>home</a>
+```
 
 2、js代码跳转
 hspa.goto(‘/home’);
@@ -144,9 +149,9 @@ hspa.replace(‘/home’);
 }
 ```
 
-如上， home.html 内部也有一个 <router></router>;  
+如上， home.html 内部也有一个 router 标签;  
 
-当匹配到 ‘/home/room’ 时，该 <router> 标签会根据 room.html 渲染。
+当匹配到 ‘/home/room’ 时，该 router 标签会根据 room.html 渲染。
 
 ### 嵌套写法的非嵌套路由
 
