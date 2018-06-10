@@ -145,6 +145,7 @@ var text = {
         return xhr;
     },
     load:function(url,callback,tag, parentTag,id,params){
+    	console.log(url,callback,tag, parentTag,id,params)
     	hspa.id = '';
     	hspa.query = null;
     	if(id && typeof id === 'string'){
@@ -434,9 +435,10 @@ Router.prototype.mount = function(routes, parentPath){
 
 	function insertOrMount(path,route,parentPath){
 		//如果是嵌套写法的非嵌套路由，如："/home/detail"，那么 /home/detail 与 /home 是独立的
+		//TODO: 这种判断二层以上的路由会有问题,如 /home/room/table
 		if(path.split('/').length>2){
 			// 对路径如 "/home/detail/:id" 的处理
-			if( /\:/.test(path) ){
+			if( /\:id/.test(path) ){
 				path = path.split(':')[0]+'([._a-zA-Z0-9-%()]+)';
 			}
 			unNestedRoutes[path]=true;
@@ -450,6 +452,7 @@ Router.prototype.mount = function(routes, parentPath){
 			routeType = typeof route,
 			method = isRoute?'on':path;
 
+		// 将路径转成数组，如 /home/room 转成 ['home','room'], 这样的目的是便于分析路径结构
 		if(isRoute){
 			path = parentPath.concat( path.split('/') );
 			path = path.filter(Boolean)
@@ -468,7 +471,7 @@ Router.prototype.mount = function(routes, parentPath){
 			return;
 		}
 
-		//是 "url":"url" 的情况时
+		//是 "url":"xxx.html" 的情况时
 		if(path === 'url'){
 			that.insert( parentPath, 'url', route );
 			return;
@@ -482,13 +485,19 @@ Router.prototype.mount = function(routes, parentPath){
 	}
 }
 
-//构建路由表
-Router.prototype.insert = function(path,method,fn,parentRoute){
+/*
+	递归构建路由表
+	path: 路径数组
+	method: 属性（如：before/on/after/url）
+	fn: 属性对应的值
+	parentRoute: 父路由的路由表对象
+*/
+Router.prototype.insert = function(path, method, fn, parentRoute){
 	var route = parentRoute ? parentRoute : this.routes,
 		pathPart = path.shift();
 
 	// 带:号，如 :id
-	if( /\:/.test(pathPart) ){
+	if( /\:id/.test(pathPart) ){
 		pathPart = '([._a-zA-Z0-9-%()]+)';
 	}
 
@@ -560,10 +569,52 @@ function isUnNestedRoute(value){
 	return false;
 }
 
+/*
+	路由的跳转类型
+	toOther：普通跳转
+	toNested：父路由跳向子路由
+	toParent：子路由跳向父路由
+	toReload：刷新的时候；以及浏览器后退时情况，如 /other 直接跳到子路由 /home/room
+*/
+var toOther=0,toNested=1,toParent=2,toReload=3;
+function typeOfRoute(path,lastPath,parentPath){
+	if( lastPath === undefined && parentPath ){ //嵌套路由执行刷新
+		return toReload;
+	}
+	else if( lastPath && lastPath === parentPath){
+		return toNested;
+	}
+	else if( lastPath && lastPath.match( new RegExp(path) ) ){
+		return toParent;
+	}
+	else{
+		/*
+			考虑浏览器后退的情况
+
+			如从 /home/room 跳转到 /user,
+			浏览器再后退回到 /home/room
+			此时 routerType 为 "to other"，
+			页面渲染不会执行 /home ，而是直接执行 /home/room。这样会造成我们不想要的结果
+		*/
+		if(lastPath){
+			var _lastPath = lastPath.split('/').filter(Boolean)[0],
+				_path = path.split('/').filter(Boolean)[0];
+
+			// 说明是同一个根路由内的跳转
+			if(_lastPath === _path){
+
+			}
+			//说明是其他路由跳转到当前。且当前路径是嵌套路由写法
+			else if( path.split('/').length > 2 ){
+				return toReload;
+			}
+		}
+		return toOther;
+	}
+}
 
 //根据 hash 执行对应的回调事件
 //path 为 "/home" 或 "/home/detail"
-var toOther=0,toNested=1,toParent=2,toReload=3;
 Router.prototype.dispatch = function(path,callback){
 	var that = this;
 	var runList = this.createRunList(path,this.routes,null,callback);
@@ -576,42 +627,6 @@ Router.prototype.dispatch = function(path,callback){
 		this.last = [ runList.after ];
 		this.lastPath = path;
 		return;
-	}
-
-	function typeOfRoute(path,lastPath,parentPath){
-		if( lastPath === undefined && parentPath ){ //嵌套路由执行刷新
-			return toReload;
-		}
-		else if( lastPath && lastPath === parentPath){
-			return toNested;
-		}
-		else if( lastPath && lastPath.match( new RegExp(path) ) ){
-			return toParent;
-		}
-		else{
-			/*
-				考虑浏览器后退的情况
-
-				如从 /home/room 跳转到 /user,
-				浏览器再后退回到 /home/room
-				此时 routerType 为 "to other"，
-				页面渲染不会执行 /home ，而是直接执行 /home/room。这样会造成我们不想要的结果
-			*/
-			if(lastPath){
-				var _lastPath = lastPath.split('/').filter(Boolean)[0],
-					_path = path.split('/').filter(Boolean)[0];
-
-				// 说明是同一个根路由内的跳转
-				if(_lastPath === _path){
-
-				}
-				//说明是其他路由跳转到当前。且当前路径是嵌套路由写法
-				else if( path.split('/').length > 2 ){
-					return toReload;
-				}
-			}
-			return toOther;
-		}
 	}
 
 	var type = typeOfRoute(path,this.lastPath,runList.parentPath);
