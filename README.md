@@ -1,5 +1,5 @@
 # hspa.js
-轻量简单的 SPA 路由框架  
+轻量简单的 SPA 路由插件  
 
 ### [在线演示](http://www.hcbook.cc/demo/hspa.js/demo/spa/index.html)
 
